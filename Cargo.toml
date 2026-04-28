@@ -6,6 +6,7 @@ authors = ["ESGI B3 SRC"]
 description = "Gestionnaire de numéros de téléphone basé sur un trie (prefix tree)"
 
 [dependencies]
+serde = { version = "1.0", features = ["derive"] }
 
 [profile.release]
 opt-level = 3

@@ -11,4 +11,6 @@
 
 #![forbid(unsafe_code)]
 
-// Les modules seront ajoutés au fil des étapes.
+pub mod contact;
+
+pub use contact::Contact;
