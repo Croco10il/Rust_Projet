@@ -1,16 +1,23 @@
-//! Démo de l'étape 9 : détection automatique des fichiers JSON dans data/.
+//! Démo de l'étape 6 : génération du format PlantUML MindMap.
 
-use phone_trie::{runner, Result};
+use phone_trie::{load_contacts, Trie};
+use std::error::Error;
 
-fn main() -> Result<()> {
-    println!("=== phone-trie : étape 9 (détection des fichiers) ===\n");
+fn main() -> Result<(), Box<dyn Error>> {
+    println!("=== phone-trie : étape 6 (sortie PlantUML) ===\n");
 
-    let files = runner::list_json_files("data")?;
-    println!("Fichiers JSON détectés dans data/ ({}) :\n", files.len());
-    for path in &files {
-        let output = runner::output_path_for(path, std::path::Path::new("graph"))?;
-        println!("  • {} → {}", path.display(), output.display());
+    let path = "data/04_common_parts.json";
+    let contacts = load_contacts(path)?;
+
+    let mut trie = Trie::new();
+    for contact in &contacts {
+        trie.insert_contact(contact);
     }
+
+    println!("Fichier : {path}");
+    println!("Contacts insérés : {}\n", contacts.len());
+    println!("Sortie PlantUML MindMap :\n");
+    println!("{trie}");
 
     Ok(())
 }
