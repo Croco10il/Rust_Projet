@@ -1,10 +1,9 @@
-//! Démo de l'étape 7 : sortie PlantUML + tests étendus sur tous les fichiers.
+//! Démo de l'étape 8 : type d'erreur unifié.
 
-use phone_trie::{load_contacts, Trie};
-use std::error::Error;
+use phone_trie::{load_contacts, Result, Trie};
 
-fn main() -> Result<(), Box<dyn Error>> {
-    println!("=== phone-trie : étape 7 (PlantUML + tests étendus) ===\n");
+fn main() -> Result<()> {
+    println!("=== phone-trie : étape 8 (erreurs unifiées) ===\n");
 
     let path = "data/04_common_parts.json";
     let contacts = load_contacts(path)?;
@@ -16,7 +15,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Fichier : {path}");
     println!("Contacts insérés : {}\n", contacts.len());
-    println!("Sortie PlantUML MindMap :\n");
+    println!("Sortie PlantUML :\n");
     println!("{trie}");
 
     Ok(())

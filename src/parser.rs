@@ -4,6 +4,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::contact::Contact;
+use crate::error::Result;
 
 /// Charge une liste de contacts depuis un fichier JSON.
 ///
@@ -12,7 +13,7 @@ use crate::contact::Contact;
 /// à la spec JSON. Comme le sujet impose de **ne pas modifier** ces
 /// fichiers, on effectue un léger prétraitement avant la
 /// désérialisation par `serde_json`.
-pub fn load_contacts<P: AsRef<Path>>(path: P) -> Result<Vec<Contact>, ParseError> {
+pub fn load_contacts<P: AsRef<Path>>(path: P) -> Result<Vec<Contact>> {
     let raw = fs::read_to_string(path.as_ref())?;
     let cleaned = strip_trailing_commas(&raw);
     let contacts: Vec<Contact> = serde_json::from_str(&cleaned)?;
@@ -36,7 +37,6 @@ fn strip_trailing_commas(input: &str) -> String {
     while i < chars.len() {
         let c = chars[i];
 
-        // Dans une string JSON : on copie tel quel et on gère l'échappement.
         if in_string {
             out.push(c);
             if escaped {
@@ -57,9 +57,6 @@ fn strip_trailing_commas(input: &str) -> String {
             continue;
         }
 
-        // Si on tombe sur une virgule en dehors d'une string, on regarde
-        // le prochain caractère non-blanc : si c'est `]` ou `}`, on
-        // saute la virgule.
         if c == ',' {
             let mut j = i + 1;
             while j < chars.len() && chars[j].is_whitespace() {
@@ -78,50 +75,10 @@ fn strip_trailing_commas(input: &str) -> String {
     out
 }
 
-/// Erreur survenant lors du chargement d'un fichier de contacts.
-#[derive(Debug)]
-pub enum ParseError {
-    /// Erreur d'I/O à la lecture du fichier.
-    Io(std::io::Error),
-    /// JSON malformé après prétraitement.
-    Json(serde_json::Error),
-}
-
-impl std::fmt::Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ParseError::Io(e) => write!(f, "erreur d'I/O : {e}"),
-            ParseError::Json(e) => write!(f, "JSON invalide : {e}"),
-        }
-    }
-}
-
-impl std::error::Error for ParseError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            ParseError::Io(e) => Some(e),
-            ParseError::Json(e) => Some(e),
-        }
-    }
-}
-
-impl From<std::io::Error> for ParseError {
-    fn from(e: std::io::Error) -> Self {
-        ParseError::Io(e)
-    }
-}
-
-impl From<serde_json::Error> for ParseError {
-    fn from(e: serde_json::Error) -> Self {
-        ParseError::Json(e)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // --- Tests du prétraitement ---
+    use crate::error::Error;
 
     #[test]
     fn strip_trailing_comma_in_array() {
@@ -153,8 +110,6 @@ mod tests {
         assert_eq!(strip_trailing_commas(input), input);
     }
 
-    // --- Tests d'intégration sur les fichiers fournis ---
-
     #[test]
     fn load_simple_file() {
         let contacts = load_contacts("data/01_simple.json").expect("should parse");
@@ -183,6 +138,6 @@ mod tests {
     #[test]
     fn load_missing_file_returns_io_error() {
         let err = load_contacts("data/does_not_exist.json").unwrap_err();
-        assert!(matches!(err, ParseError::Io(_)));
+        assert!(matches!(err, Error::Io(_)));
     }
 }
