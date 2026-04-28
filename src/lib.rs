@@ -13,6 +13,7 @@
 
 pub mod contact;
 pub mod parser;
+pub mod plantuml;
 pub mod trie;
 
 pub use contact::Contact;
