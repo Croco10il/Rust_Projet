@@ -36,15 +36,22 @@ impl Display for Trie {
 /// Écrit récursivement les enfants d'un nœud dans le formatter, en
 /// utilisant `level` étoiles pour marquer la profondeur courante.
 fn write_node(node: &TrieNode, level: usize, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    // Le `BTreeMap` garantit que les enfants sont parcourus dans l'ordre
+    // croissant de leur caractère — pas besoin de trier manuellement.
     for (digit, child) in node.children() {
+        // Écrit la ligne pour le chiffre courant : "*** 5" par exemple.
         write_stars(level, f)?;
         writeln!(f, " {digit}")?;
 
+        // Si l'enfant est terminal, on écrit le nom comme un nœud feuille
+        // supplémentaire un niveau plus bas. C'est ce que demande l'exemple
+        // du sujet pour le format PlantUML MindMap.
         if let Some(name) = child.terminal() {
             write_stars(level + 1, f)?;
             writeln!(f, " {name}")?;
         }
 
+        // Récursion sur les enfants de cet enfant.
         write_node(child, level + 1, f)?;
     }
     Ok(())
@@ -61,19 +68,6 @@ fn write_stars(count: usize, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::load_contacts;
-
-    /// Construit un trie à partir d'un fichier JSON, helper de tests.
-    fn trie_from_file(path: &str) -> Trie {
-        let contacts = load_contacts(path).expect("fichier de test manquant");
-        let mut trie = Trie::new();
-        for c in &contacts {
-            trie.insert_contact(c);
-        }
-        trie
-    }
-
-    // ===== Tests basiques (étape 6) =====
 
     #[test]
     fn empty_trie_outputs_only_markers() {
@@ -108,59 +102,5 @@ mod tests {
         let output = trie.to_string();
         assert!(output.starts_with("@startmindmap\n"));
         assert!(output.ends_with("@endmindmap\n"));
-    }
-
-    // ===== Tests sur les fichiers de test fournis (étape 7) =====
-
-    #[test]
-    fn output_for_simple_file() {
-        // 01_simple : un seul contact "Alice" au numéro "0467123456".
-        let trie = trie_from_file("data/01_simple.json");
-        let output = trie.to_string();
-
-        assert!(output.starts_with("@startmindmap\n"));
-        assert!(output.ends_with("@endmindmap\n"));
-        assert!(output.contains("* 0"));
-        assert!(output.contains("Alice"));
-    }
-
-    #[test]
-    fn output_for_different_roots_has_two_top_branches() {
-        // 02_different_roots : "0123456789" et "1123456789".
-        // → deux branches au niveau 1 ('0' et '1').
-        let trie = trie_from_file("data/02_different_roots.json");
-        let output = trie.to_string();
-
-        // Compte les lignes qui ont exactement 1 étoile suivie d'un espace.
-        let level1_lines = output
-            .lines()
-            .filter(|line| line.starts_with("* ") && !line.starts_with("**"))
-            .count();
-        assert_eq!(level1_lines, 2, "attendu 2 racines, sortie : {output}");
-    }
-
-    #[test]
-    fn output_for_one_in_another_keeps_both_names() {
-        // 03_one_in_another : "0123" préfixe de "0123456789".
-        // Les deux noms doivent apparaître dans la sortie.
-        let trie = trie_from_file("data/03_one_in_another.json");
-        let output = trie.to_string();
-
-        assert!(output.contains("Alice"));
-        assert!(output.contains("Bob"));
-    }
-
-    #[test]
-    fn output_for_common_parts_contains_all_five_names() {
-        // 04_common_parts : 5 contacts (Alice, Bob, patate, Urgences, SAMU).
-        let trie = trie_from_file("data/04_common_parts.json");
-        let output = trie.to_string();
-
-        for expected_name in ["Alice", "Bob", "patate", "Urgences", "SAMU"] {
-            assert!(
-                output.contains(expected_name),
-                "le nom '{expected_name}' manque dans la sortie : {output}"
-            );
-        }
     }
 }

@@ -1,10 +1,10 @@
-//! Démo de l'étape 7 : sortie PlantUML + tests étendus sur tous les fichiers.
+//! Démo de l'étape 6 : génération du format PlantUML MindMap.
 
 use phone_trie::{load_contacts, Trie};
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    println!("=== phone-trie : étape 7 (PlantUML + tests étendus) ===\n");
+    println!("=== phone-trie : étape 6 (sortie PlantUML) ===\n");
 
     let path = "data/04_common_parts.json";
     let contacts = load_contacts(path)?;
