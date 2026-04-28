@@ -13,8 +13,7 @@
 //!     - l'ordre déterministe simplifie aussi l'écriture des tests.
 //! - Chaque nœud porte un champ [`TrieNode::terminal`] : c'est `Some(nom)`
 //!   uniquement si le nœud termine un numéro complet (= un contact se
-//!   termine ici), sinon `None`. C'est plus expressif que d'avoir un
-//!   simple booléen + un champ de nom séparé.
+//!   termine ici), sinon `None`.
 //! - La racine du [`Trie`] est privée. L'extérieur passe par les méthodes
 //!   [`Trie::root`], [`Trie::insert`] et [`Trie::insert_contact`].
 
@@ -23,75 +22,49 @@ use std::collections::BTreeMap;
 use crate::contact::Contact;
 
 /// Un nœud du trie.
-///
-/// Un nœud peut être *terminal* (il porte alors le nom du contact dont le
-/// numéro se termine ici), ou simplement un nœud de passage vers ses enfants.
 #[derive(Debug, Default)]
 pub struct TrieNode {
-    /// Enfants du nœud, indexés par leur caractère (chiffre).
-    /// Visibilité `pub(crate)` : les autres modules de la lib (notamment
-    /// le futur module `plantuml`) y ont accès, mais pas l'API publique.
     pub(crate) children: BTreeMap<char, TrieNode>,
-    /// Nom du contact si ce nœud termine un numéro, `None` sinon.
     pub(crate) terminal: Option<String>,
 }
 
 impl TrieNode {
-    /// Crée un nouveau nœud vide.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Indique si ce nœud termine un numéro complet.
     pub fn is_terminal(&self) -> bool {
         self.terminal.is_some()
     }
 
-    /// Retourne une référence vers les enfants du nœud.
-    /// Les enfants sont ordonnés par caractère (grâce au [`BTreeMap`]).
     pub fn children(&self) -> &BTreeMap<char, TrieNode> {
         &self.children
     }
 
-    /// Retourne le nom associé si ce nœud est terminal.
     pub fn terminal(&self) -> Option<&str> {
         self.terminal.as_deref()
     }
 }
 
 /// Trie de numéros de téléphone.
-///
-/// Chaque numéro est représenté par un chemin allant de la racine à un nœud
-/// terminal. Les numéros qui partagent un préfixe partagent aussi le chemin
-/// correspondant — c'est tout l'intérêt d'un prefix tree.
 #[derive(Debug, Default)]
 pub struct Trie {
-    /// Racine du trie. Volontairement privée pour forcer l'usage de l'API.
     root: TrieNode,
 }
 
 impl Trie {
-    /// Construit un trie vide.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Indique si le trie ne contient aucun numéro.
     pub fn is_empty(&self) -> bool {
         self.root.children.is_empty()
     }
 
-    /// Insère un contact dans le trie.
-    ///
-    /// C'est l'API recommandée : elle est type-safe (on ne risque pas
-    /// d'inverser numéro et nom) et reflète le modèle métier.
     pub fn insert_contact(&mut self, contact: &Contact) {
         self.insert(&contact.nb, &contact.name);
     }
 
-    /// Insère un numéro et son nom dans le trie.
-    ///
-    /// Si le numéro existe déjà, le nom précédent est écrasé.
     pub fn insert(&mut self, number: &str, name: &str) {
         let mut current = &mut self.root;
         for digit in number.chars() {
@@ -100,8 +73,6 @@ impl Trie {
         current.terminal = Some(name.to_string());
     }
 
-    /// Donne accès à la racine du trie en lecture seule.
-    /// Utile pour les modules qui parcourent l'arbre (ex : sérialisation).
     pub fn root(&self) -> &TrieNode {
         &self.root
     }
@@ -110,6 +81,8 @@ impl Trie {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ===== Tests basiques (étape 4) =====
 
     #[test]
     fn new_trie_is_empty() {
@@ -125,12 +98,10 @@ mod tests {
 
         assert!(!trie.is_empty());
 
-        // On suit le chemin 1 → 2 → 3.
         let n1 = trie.root().children().get(&'1').expect("1 manquant");
         let n2 = n1.children().get(&'2').expect("2 manquant");
         let n3 = n2.children().get(&'3').expect("3 manquant");
 
-        // Seul le dernier nœud doit être terminal.
         assert!(!n1.is_terminal());
         assert!(!n2.is_terminal());
         assert!(n3.is_terminal());
@@ -143,7 +114,6 @@ mod tests {
         let mut trie = Trie::new();
         trie.insert_contact(&contact);
 
-        // On suit le numéro complet et on vérifie qu'il termine bien sur "Alice".
         let mut node = trie.root();
         for c in "0612345678".chars() {
             node = node.children().get(&c).expect("chemin tronqué");
@@ -160,5 +130,72 @@ mod tests {
         let n4 = trie.root().children().get(&'4').unwrap();
         let n2 = n4.children().get(&'2').unwrap();
         assert_eq!(n2.terminal(), Some("Bob"));
+    }
+
+    // ===== Tests des cas complexes (étape 5) =====
+
+    #[test]
+    fn shared_prefix_creates_branching() {
+        // Deux numéros qui partagent le préfixe "12" : la branche commune
+        // doit être partagée jusqu'au point de divergence.
+        let mut trie = Trie::new();
+        trie.insert("123", "Alice");
+        trie.insert("124", "Bob");
+
+        let n1 = trie.root().children().get(&'1').unwrap();
+        let n2 = n1.children().get(&'2').unwrap();
+
+        assert_eq!(n2.children().len(), 2);
+        assert_eq!(n2.children().get(&'3').unwrap().terminal(), Some("Alice"));
+        assert_eq!(n2.children().get(&'4').unwrap().terminal(), Some("Bob"));
+    }
+
+    #[test]
+    fn prefix_collision_one_number_is_prefix_of_another() {
+        // Cas du fichier 03_one_in_another.json : "0123" est préfixe
+        // de "0123456789". Le nœud à la position "0123" doit être
+        // simultanément terminal (pour Bob) ET avoir des enfants
+        // (pour continuer vers Alice).
+        let mut trie = Trie::new();
+        trie.insert("0123", "Bob");
+        trie.insert("0123456789", "Alice");
+
+        let mut node = trie.root();
+        for c in "0123".chars() {
+            node = node.children().get(&c).unwrap();
+        }
+        assert_eq!(node.terminal(), Some("Bob"));
+        assert!(node.children().contains_key(&'4'));
+
+        let mut node = trie.root();
+        for c in "0123456789".chars() {
+            node = node.children().get(&c).unwrap();
+        }
+        assert_eq!(node.terminal(), Some("Alice"));
+    }
+
+    #[test]
+    fn multiple_disjoint_roots() {
+        let mut trie = Trie::new();
+        trie.insert("0123", "Alice");
+        trie.insert("1123", "Bob");
+
+        assert_eq!(trie.root().children().len(), 2);
+        assert!(trie.root().children().contains_key(&'0'));
+        assert!(trie.root().children().contains_key(&'1'));
+    }
+
+    #[test]
+    fn order_of_insertion_does_not_matter() {
+        // BTreeMap garantit l'ordre par clé, pas par ordre d'insertion.
+        let mut a = Trie::new();
+        a.insert("123", "Alice");
+        a.insert("124", "Bob");
+
+        let mut b = Trie::new();
+        b.insert("124", "Bob");
+        b.insert("123", "Alice");
+
+        assert_eq!(format!("{:?}", a), format!("{:?}", b));
     }
 }

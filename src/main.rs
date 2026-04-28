@@ -1,26 +1,23 @@
-//! Démo de l'étape 4 : construction d'un trie depuis des contacts en mémoire.
+//! Démo de l'étape 5 : trie chargé depuis un fichier JSON réel.
 
-use phone_trie::{Contact, Trie};
+use phone_trie::{load_contacts, Trie};
+use std::error::Error;
 
-fn main() {
-    println!("=== phone-trie : étape 4 (trie de base) ===\n");
+fn main() -> Result<(), Box<dyn Error>> {
+    println!("=== phone-trie : étape 5 (trie depuis fichier JSON) ===\n");
 
-    // Quelques contacts en dur — pas encore de chargement JSON depuis main
-    // (ça arrivera quand on branchera le pipeline complet).
-    let contacts = vec![
-        Contact::new("0612345678", "Alice"),
-        Contact::new("0698765432", "Bob"),
-        Contact::new("112", "Urgences"),
-    ];
+    let path = "data/04_common_parts.json";
+    let contacts = load_contacts(path)?;
 
-    // On construit le trie en y insérant chaque contact.
     let mut trie = Trie::new();
     for contact in &contacts {
         trie.insert_contact(contact);
     }
 
-    println!("{} contact(s) insérés dans le trie.", contacts.len());
-    println!("Trie vide ? {}", trie.is_empty());
-    println!("\nReprésentation interne (debug-print) :\n");
+    println!("Fichier : {path}");
+    println!("Contacts insérés : {}", contacts.len());
+    println!("\nReprésentation interne du trie :\n");
     println!("{:#?}", trie);
+
+    Ok(())
 }
