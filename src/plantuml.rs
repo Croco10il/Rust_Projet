@@ -27,30 +27,61 @@ use crate::trie::{Trie, TrieNode};
 
 impl Display for Trie {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // 1. Marqueur de début obligatoire pour PlantUML.
         f.write_str("@startmindmap\n")?;
+
+        // 2. On parcourt l'arbre en partant de la racine.
+        //    On commence au niveau 1 car la racine elle-même n'est pas
+        //    affichée — elle est implicite dans le format MindMap.
         write_node(self.root(), 1, f)?;
+
+        // 3. Marqueur de fin obligatoire.
         f.write_str("@endmindmap\n")
     }
 }
 
-/// Écrit récursivement les enfants d'un nœud dans le formatter, en
-/// utilisant `level` étoiles pour marquer la profondeur courante.
+/// Écrit récursivement les enfants d'un nœud dans le formatter.
+///
+/// `level` représente la profondeur courante (= nombre d'étoiles à
+/// afficher devant chaque chiffre). On l'incrémente à chaque récursion.
+///
+/// # Algorithme (parcours en profondeur, DFS)
+///
+/// Pour chaque enfant `child` du nœud courant :
+/// 1. on écrit la ligne du chiffre avec `level` étoiles ;
+/// 2. si l'enfant est terminal, on écrit le nom une étoile plus profond ;
+/// 3. on récurse sur les petits-enfants avec `level + 1`.
+///
+/// L'ordre du parcours est garanti par le `BTreeMap` qui stocke les
+/// enfants triés par caractère — pas besoin de trier manuellement.
 fn write_node(node: &TrieNode, level: usize, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    // Le BTreeMap garantit que les enfants sont parcourus dans l'ordre
+    // croissant de leur caractère ('0' → '1' → ... → '9').
     for (digit, child) in node.children() {
+        // Étape 1 : écriture du chiffre courant avec son indentation.
+        // Exemple à level=3 : "*** 5"
         write_stars(level, f)?;
         writeln!(f, " {digit}")?;
 
+        // Étape 2 : si ce nœud est terminal, on émet le nom comme une
+        // feuille supplémentaire un niveau plus bas. C'est la convention
+        // du sujet (cf. exemple `04_common_parts.puml`).
         if let Some(name) = child.terminal() {
             write_stars(level + 1, f)?;
             writeln!(f, " {name}")?;
         }
 
+        // Étape 3 : on continue la descente. Les enfants éventuels de
+        // ce nœud seront affichés avec un niveau supplémentaire.
         write_node(child, level + 1, f)?;
     }
     Ok(())
 }
 
-/// Écrit `count` étoiles dans le formatter.
+/// Écrit `count` étoiles consécutives dans le formatter.
+///
+/// On utilise une boucle plutôt qu'un `String::repeat` pour écrire
+/// directement dans le formatter sans allouer de chaîne temporaire.
 fn write_stars(count: usize, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     for _ in 0..count {
         f.write_char('*')?;
@@ -72,8 +103,6 @@ mod tests {
         }
         trie
     }
-
-    // ===== Tests basiques (étape 6) =====
 
     #[test]
     fn empty_trie_outputs_only_markers() {
@@ -110,11 +139,8 @@ mod tests {
         assert!(output.ends_with("@endmindmap\n"));
     }
 
-    // ===== Tests sur les fichiers de test fournis (étape 7) =====
-
     #[test]
     fn output_for_simple_file() {
-        // 01_simple : un seul contact "Alice" au numéro "0467123456".
         let trie = trie_from_file("data/01_simple.json");
         let output = trie.to_string();
 
@@ -126,12 +152,9 @@ mod tests {
 
     #[test]
     fn output_for_different_roots_has_two_top_branches() {
-        // 02_different_roots : "0123456789" et "1123456789".
-        // → deux branches au niveau 1 ('0' et '1').
         let trie = trie_from_file("data/02_different_roots.json");
         let output = trie.to_string();
 
-        // Compte les lignes qui ont exactement 1 étoile suivie d'un espace.
         let level1_lines = output
             .lines()
             .filter(|line| line.starts_with("* ") && !line.starts_with("**"))
@@ -141,8 +164,6 @@ mod tests {
 
     #[test]
     fn output_for_one_in_another_keeps_both_names() {
-        // 03_one_in_another : "0123" préfixe de "0123456789".
-        // Les deux noms doivent apparaître dans la sortie.
         let trie = trie_from_file("data/03_one_in_another.json");
         let output = trie.to_string();
 
@@ -152,7 +173,6 @@ mod tests {
 
     #[test]
     fn output_for_common_parts_contains_all_five_names() {
-        // 04_common_parts : 5 contacts (Alice, Bob, patate, Urgences, SAMU).
         let trie = trie_from_file("data/04_common_parts.json");
         let output = trie.to_string();
 

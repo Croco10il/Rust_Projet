@@ -1,0 +1,12 @@
+# Configuration de cargo fmt pour ce projet.
+#
+# On garde une configuration simple, proche des valeurs par défaut de
+# rustfmt, avec quelques ajustements pour la lisibilité.
+
+edition = "2021"
+max_width = 100
+hard_tabs = false
+tab_spaces = 4
+newline_style = "Unix"
+use_field_init_shorthand = true
+use_try_shorthand = true

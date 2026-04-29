@@ -76,13 +76,41 @@ impl Trie {
     pub fn root(&self) -> &TrieNode {
         &self.root
     }
+
+    /// Retourne le nombre de numéros stockés dans le trie.
+    ///
+    /// On compte les nœuds terminaux en parcourant l'arbre récursivement.
+    /// Cette méthode est utile pour les statistiques et pour les tests.
+    pub fn len(&self) -> usize {
+        count_terminals(&self.root)
+    }
+
+    /// Indique si un numéro est présent dans le trie.
+    ///
+    /// On suit le chemin correspondant aux chiffres du numéro depuis la
+    /// racine. Si on tombe sur un chemin inexistant ou qu'on arrive à un
+    /// nœud non-terminal, le numéro n'est pas dans le trie.
+    pub fn contains(&self, number: &str) -> bool {
+        let mut current = &self.root;
+        for digit in number.chars() {
+            match current.children.get(&digit) {
+                Some(child) => current = child,
+                None => return false,
+            }
+        }
+        current.is_terminal()
+    }
+}
+
+/// Compte récursivement les nœuds terminaux d'un sous-arbre.
+fn count_terminals(node: &TrieNode) -> usize {
+    let here = if node.is_terminal() { 1 } else { 0 };
+    here + node.children.values().map(count_terminals).sum::<usize>()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // ===== Tests basiques (étape 4) =====
 
     #[test]
     fn new_trie_is_empty() {
@@ -132,12 +160,8 @@ mod tests {
         assert_eq!(n2.terminal(), Some("Bob"));
     }
 
-    // ===== Tests des cas complexes (étape 5) =====
-
     #[test]
     fn shared_prefix_creates_branching() {
-        // Deux numéros qui partagent le préfixe "12" : la branche commune
-        // doit être partagée jusqu'au point de divergence.
         let mut trie = Trie::new();
         trie.insert("123", "Alice");
         trie.insert("124", "Bob");
@@ -152,10 +176,6 @@ mod tests {
 
     #[test]
     fn prefix_collision_one_number_is_prefix_of_another() {
-        // Cas du fichier 03_one_in_another.json : "0123" est préfixe
-        // de "0123456789". Le nœud à la position "0123" doit être
-        // simultanément terminal (pour Bob) ET avoir des enfants
-        // (pour continuer vers Alice).
         let mut trie = Trie::new();
         trie.insert("0123", "Bob");
         trie.insert("0123456789", "Alice");
@@ -187,7 +207,6 @@ mod tests {
 
     #[test]
     fn order_of_insertion_does_not_matter() {
-        // BTreeMap garantit l'ordre par clé, pas par ordre d'insertion.
         let mut a = Trie::new();
         a.insert("123", "Alice");
         a.insert("124", "Bob");
@@ -197,5 +216,72 @@ mod tests {
         b.insert("123", "Alice");
 
         assert_eq!(format!("{:?}", a), format!("{:?}", b));
+    }
+
+    // ===== Étape 13 : len() et contains() =====
+
+    #[test]
+    fn len_is_zero_for_empty_trie() {
+        let trie = Trie::new();
+        assert_eq!(trie.len(), 0);
+    }
+
+    #[test]
+    fn len_counts_unique_numbers() {
+        let mut trie = Trie::new();
+        trie.insert("123", "Alice");
+        trie.insert("124", "Bob");
+        trie.insert("125", "Charlie");
+        assert_eq!(trie.len(), 3);
+    }
+
+    #[test]
+    fn len_does_not_double_count_overwrites() {
+        let mut trie = Trie::new();
+        trie.insert("123", "Alice");
+        trie.insert("123", "Bob"); // écrase Alice
+        assert_eq!(trie.len(), 1);
+    }
+
+    #[test]
+    fn len_handles_prefix_collision() {
+        // Deux numéros dont l'un est préfixe de l'autre = 2 numéros distincts.
+        let mut trie = Trie::new();
+        trie.insert("0123", "Bob");
+        trie.insert("0123456789", "Alice");
+        assert_eq!(trie.len(), 2);
+    }
+
+    #[test]
+    fn contains_returns_true_for_inserted_number() {
+        let mut trie = Trie::new();
+        trie.insert("0612345678", "Alice");
+        assert!(trie.contains("0612345678"));
+    }
+
+    #[test]
+    fn contains_returns_false_for_missing_number() {
+        let mut trie = Trie::new();
+        trie.insert("0612345678", "Alice");
+        assert!(!trie.contains("0699999999"));
+    }
+
+    #[test]
+    fn contains_returns_false_for_prefix_only() {
+        // "061234" est préfixe de "0612345678" mais n'a pas été inséré
+        // comme numéro complet → le contient pas.
+        let mut trie = Trie::new();
+        trie.insert("0612345678", "Alice");
+        assert!(!trie.contains("061234"));
+    }
+
+    #[test]
+    fn contains_works_when_prefix_is_also_a_full_number() {
+        let mut trie = Trie::new();
+        trie.insert("0123", "Bob");
+        trie.insert("0123456789", "Alice");
+        assert!(trie.contains("0123"));
+        assert!(trie.contains("0123456789"));
+        assert!(!trie.contains("01234"));
     }
 }

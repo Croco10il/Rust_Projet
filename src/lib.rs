@@ -6,6 +6,7 @@ pub mod contact;
 pub mod error;
 pub mod parser;
 pub mod plantuml;
+pub mod runner;
 pub mod trie;
 
 pub use contact::Contact;

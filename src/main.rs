@@ -1,22 +1,26 @@
-//! Démo de l'étape 8 : type d'erreur unifié.
+//! Point d'entrée du programme phone-trie.
+//!
+//! Le main est volontairement minimal : toute la logique est dans la
+//! bibliothèque (`lib.rs`), ce qui permet de la tester indépendamment.
 
-use phone_trie::{load_contacts, Result, Trie};
+use phone_trie::{runner, Result};
 
 fn main() -> Result<()> {
-    println!("=== phone-trie : étape 8 (erreurs unifiées) ===\n");
+    println!("=== phone-trie : pipeline complet ===\n");
 
-    let path = "data/04_common_parts.json";
-    let contacts = load_contacts(path)?;
+    let outputs = runner::run_all("data", "graph")?;
 
-    let mut trie = Trie::new();
-    for contact in &contacts {
-        trie.insert_contact(contact);
+    println!(
+        "Pipeline terminé. {} fichier(s) généré(s) :\n",
+        outputs.len()
+    );
+    for path in &outputs {
+        println!("  ✓ {}", path.display());
     }
-
-    println!("Fichier : {path}");
-    println!("Contacts insérés : {}\n", contacts.len());
-    println!("Sortie PlantUML :\n");
-    println!("{trie}");
+    println!(
+        "\nLe contenu PlantUML est prêt à être visualisé.\n\
+         Voir le README pour les instructions PlantUML."
+    );
 
     Ok(())
 }
