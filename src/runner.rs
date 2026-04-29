@@ -1,18 +1,25 @@
 //! Pipeline qui parcourt le dossier `data/` et génère les fichiers PlantUML
 //! correspondants dans `graph/`.
 //!
-//! Ce module fournit deux fonctions utilitaires pour cette étape :
-//! - [`list_json_files`] : liste les `.json` d'un dossier (triés par nom) ;
-//! - [`output_path_for`] : calcule le chemin de sortie `.puml` pour un
-//!   `.json` donné (`data/01_simple.json` → `graph/01_simple.puml`).
+//! C'est le module qui orchestre tout le projet :
 //!
-//! La fonction `run_all` qui orchestre le pipeline complet sera ajoutée
-//! à l'étape suivante.
+//! ```text
+//!   data/*.json  ──[load_contacts]──▶  Vec<Contact>
+//!                                          │
+//!                                          ▼
+//!                              ──[Trie::insert_contact]──▶  Trie
+//!                                                            │
+//!                                                            ▼
+//!                                                  ──[Display]──▶  graph/*.puml
+//! ```
+//!
+//! L'utilisateur final n'a qu'à appeler [`run_all`] qui s'occupe de tout.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::error::{Error, Result};
+use crate::Trie;
 
 /// Liste tous les fichiers JSON présents dans un répertoire, triés
 /// par ordre alphabétique pour avoir une sortie déterministe.
@@ -53,6 +60,48 @@ pub fn output_path_for(json_path: &Path, output_dir: &Path) -> Result<PathBuf> {
     Ok(output_dir.join(format!("{stem}.puml")))
 }
 
+/// Construit un trie à partir d'un fichier JSON.
+pub fn build_trie<P: AsRef<Path>>(json_path: P) -> Result<Trie> {
+    let contacts = crate::parser::load_contacts(json_path)?;
+    let mut trie = Trie::new();
+    for contact in &contacts {
+        trie.insert_contact(contact);
+    }
+    Ok(trie)
+}
+
+/// Traite un fichier JSON : le charge, construit le trie, écrit le `.puml`.
+/// Retourne le chemin du fichier de sortie.
+pub fn process_file(json_path: &Path, output_dir: &Path) -> Result<PathBuf> {
+    let trie = build_trie(json_path)?;
+    let output = output_path_for(json_path, output_dir)?;
+    fs::write(&output, trie.to_string())?;
+    Ok(output)
+}
+
+/// Pipeline complet : parcourt `data_dir`, traite chaque fichier JSON,
+/// écrit le résultat PlantUML dans `output_dir`.
+///
+/// Si `output_dir` n'existe pas, il est créé.
+pub fn run_all<P: AsRef<Path>>(data_dir: P, output_dir: P) -> Result<Vec<PathBuf>> {
+    let data_dir = data_dir.as_ref();
+    let output_dir = output_dir.as_ref();
+
+    if !output_dir.exists() {
+        fs::create_dir_all(output_dir)?;
+    }
+
+    let files = list_json_files(data_dir)?;
+    let mut outputs = Vec::with_capacity(files.len());
+
+    for json_path in files {
+        let output = process_file(&json_path, output_dir)?;
+        outputs.push(output);
+    }
+
+    Ok(outputs)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -88,5 +137,11 @@ mod tests {
         let p = Path::new("data/01_simple.json");
         let out = output_path_for(p, Path::new("graph")).unwrap();
         assert_eq!(out, Path::new("graph/01_simple.puml"));
+    }
+
+    #[test]
+    fn build_trie_from_simple_file() {
+        let trie = build_trie("data/01_simple.json").unwrap();
+        assert!(!trie.is_empty());
     }
 }

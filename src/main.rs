@@ -1,23 +1,23 @@
-//! Démo de l'étape 6 : génération du format PlantUML MindMap.
+//! Point d'entrée du programme phone-trie.
+//!
+//! Le main est volontairement minimal : toute la logique est dans la
+//! bibliothèque (`lib.rs`), ce qui permet de la tester indépendamment.
 
-use phone_trie::{load_contacts, Trie};
-use std::error::Error;
+use phone_trie::{runner, Result};
 
-fn main() -> Result<(), Box<dyn Error>> {
-    println!("=== phone-trie : étape 6 (sortie PlantUML) ===\n");
+fn main() -> Result<()> {
+    println!("=== phone-trie : pipeline complet ===\n");
 
-    let path = "data/04_common_parts.json";
-    let contacts = load_contacts(path)?;
+    let outputs = runner::run_all("data", "graph")?;
 
-    let mut trie = Trie::new();
-    for contact in &contacts {
-        trie.insert_contact(contact);
+    println!("Pipeline terminé. {} fichier(s) généré(s) :\n", outputs.len());
+    for path in &outputs {
+        println!("  ✓ {}", path.display());
     }
-
-    println!("Fichier : {path}");
-    println!("Contacts insérés : {}\n", contacts.len());
-    println!("Sortie PlantUML MindMap :\n");
-    println!("{trie}");
+    println!(
+        "\nLe contenu PlantUML est prêt à être visualisé.\n\
+         Voir le README pour les instructions PlantUML."
+    );
 
     Ok(())
 }

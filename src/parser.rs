@@ -13,8 +13,20 @@ use crate::error::Result;
 /// à la spec JSON. Comme le sujet impose de **ne pas modifier** ces
 /// fichiers, on effectue un léger prétraitement avant la
 /// désérialisation par `serde_json`.
+///
+/// Un fichier qui ne contient qu'un tableau vide (`[]`) ou qui contient
+/// uniquement des espaces / sauts de ligne est accepté et retourne un
+/// `Vec` vide, sans erreur.
 pub fn load_contacts<P: AsRef<Path>>(path: P) -> Result<Vec<Contact>> {
     let raw = fs::read_to_string(path.as_ref())?;
+
+    // Cas particulier : fichier vide ou ne contenant que des espaces.
+    // serde_json planterait avec une erreur peu explicite, on retourne
+    // simplement une liste vide (cohérent avec un tableau JSON vide).
+    if raw.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+
     let cleaned = strip_trailing_commas(&raw);
     let contacts: Vec<Contact> = serde_json::from_str(&cleaned)?;
     Ok(contacts)
@@ -139,5 +151,41 @@ mod tests {
     fn load_missing_file_returns_io_error() {
         let err = load_contacts("data/does_not_exist.json").unwrap_err();
         assert!(matches!(err, Error::Io(_)));
+    }
+
+    // ===== Étape 12 : fix empty JSON =====
+
+    #[test]
+    fn empty_file_returns_empty_vec() {
+        // Crée un fichier temporaire vide.
+        let path = std::env::temp_dir().join("phone_trie_empty.json");
+        std::fs::write(&path, "").unwrap();
+
+        let contacts = load_contacts(&path).expect("doit accepter fichier vide");
+        assert!(contacts.is_empty());
+
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn whitespace_only_file_returns_empty_vec() {
+        let path = std::env::temp_dir().join("phone_trie_whitespace.json");
+        std::fs::write(&path, "   \n\n  \t\n").unwrap();
+
+        let contacts = load_contacts(&path).expect("doit accepter fichier blanc");
+        assert!(contacts.is_empty());
+
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn empty_json_array_returns_empty_vec() {
+        let path = std::env::temp_dir().join("phone_trie_empty_array.json");
+        std::fs::write(&path, "[]").unwrap();
+
+        let contacts = load_contacts(&path).expect("doit accepter []");
+        assert!(contacts.is_empty());
+
+        std::fs::remove_file(&path).ok();
     }
 }

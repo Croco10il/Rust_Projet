@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["ESGI B3 SRC"]
 description = "Gestionnaire de numéros de téléphone basé sur un trie (prefix tree)"
+license = "MIT"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
