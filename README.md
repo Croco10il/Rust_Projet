@@ -361,11 +361,11 @@ illustre l'efficacité du trie pour le stockage.
 Projet réalisé en groupe (3 personnes) dans le cadre du module
 **Rust** en B3 SRC à l'**ESGI**.
 
-| Nom         | Rôle / Responsabilités                                                |
-|-------------|-----------------------------------------------------------------------|
-| **Nom 1**   | Setup projet, module PlantUML, intégration finale, doc                |
-| **Nom 2**   | Modèle de données, parser JSON, trie de base                          |
-| **Nom 3**   | Type d'erreur, runner, tests d'intégration, qualité                   |
+| Nom          | 
+|--------------|
+| **Gael**     |
+| **Eyup**     |
+| **Oskar**    |
 
 ---
 
