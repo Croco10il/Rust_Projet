@@ -3,7 +3,7 @@ name = "phone-trie"
 version = "0.1.0"
 edition = "2021"
 authors = ["ESGI B3 SRC"]
-description = "Gestionnaire de numéros de téléphone basé sur un trie (prefix tree)"
+description = "Gestionnaire de numéros de téléphone basé sur un trie (prefix tree) Gael Eyup et Oskar"
 license = "MIT"
 
 [dependencies]
