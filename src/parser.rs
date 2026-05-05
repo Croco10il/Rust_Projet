@@ -6,23 +6,11 @@ use std::path::Path;
 use crate::contact::Contact;
 use crate::error::Result;
 
-/// Charge une liste de contacts depuis un fichier JSON.
-///
-/// Les fichiers fournis dans le dossier `data/` contiennent parfois des
-/// virgules terminales (« trailing commas ») qui ne sont pas conformes
-/// à la spec JSON. Comme le sujet impose de **ne pas modifier** ces
-/// fichiers, on effectue un léger prétraitement avant la
-/// désérialisation par `serde_json`.
-///
-/// Un fichier qui ne contient qu'un tableau vide (`[]`) ou qui contient
-/// uniquement des espaces / sauts de ligne est accepté et retourne un
-/// `Vec` vide, sans erreur.
+
 pub fn load_contacts<P: AsRef<Path>>(path: P) -> Result<Vec<Contact>> {
     let raw = fs::read_to_string(path.as_ref())?;
 
-    // Cas particulier : fichier vide ou ne contenant que des espaces.
-    // serde_json planterait avec une erreur peu explicite, on retourne
-    // simplement une liste vide (cohérent avec un tableau JSON vide).
+
     if raw.trim().is_empty() {
         return Ok(Vec::new());
     }
@@ -32,13 +20,6 @@ pub fn load_contacts<P: AsRef<Path>>(path: P) -> Result<Vec<Contact>> {
     Ok(contacts)
 }
 
-/// Retire les trailing commas dans un texte JSON (virgule placée juste
-/// avant `]` ou `}`, éventuellement séparée par des espaces ou sauts
-/// de ligne).
-///
-/// L'implémentation est volontairement simple : on parcourt le texte
-/// caractère par caractère en gardant trace de si on est dans une
-/// chaîne JSON (auquel cas on ne touche à rien).
 fn strip_trailing_commas(input: &str) -> String {
     let mut out = String::with_capacity(input.len());
     let mut in_string = false;
