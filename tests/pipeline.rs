@@ -1,12 +1,3 @@
-//! Tests d'intégration end-to-end.
-//!
-//! Ces tests exercent le pipeline complet : on invoque `runner::run_all`
-//! sur le dossier `data/` réel, on vérifie que tous les fichiers `.puml`
-//! sont produits avec le bon contenu, puis on nettoie.
-//!
-//! Contrairement aux tests unitaires des modules, ceux-ci traversent
-//! plusieurs couches du système : I/O, désérialisation, trie, sérialisation.
-
 use std::fs;
 use std::path::PathBuf;
 
