@@ -1,3 +1,26 @@
+//! Sérialisation d'un trie au format PlantUML MindMap.
+//!
+//! # Format
+//!
+//! Le format MindMap utilise des étoiles pour marquer la profondeur :
+//! - `* X` pour le niveau 1
+//! - `** X` pour le niveau 2
+//! - etc.
+//!
+//! Le document doit être encadré par les balises `@startmindmap` et
+//! `@endmindmap`. Le nom d'un contact apparaît comme un nœud feuille
+//! supplémentaire un niveau plus bas que le dernier chiffre de son numéro.
+//!
+//! # Choix d'implémentation
+//!
+//! On implémente le trait [`Display`] pour [`Trie`] plutôt qu'une fonction
+//! libre `generate_plantuml(trie)`. Avantages :
+//! - syntaxe naturelle : `format!("{trie}")` ou `println!("{trie}")` ;
+//! - intégration native avec `write!`, `writeln!`, et tout l'écosystème
+//!   Rust qui s'appuie sur `Display` ;
+//! - on évite d'allouer une [`String`] intermédiaire si on écrit
+//!   directement dans un fichier ou un buffer.
+
 use std::fmt::{self, Display, Write};
 
 use crate::trie::{Trie, TrieNode};
@@ -5,13 +28,13 @@ use crate::trie::{Trie, TrieNode};
 impl Display for Trie {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("@startmindmap\n")?;
-
         write_node(self.root(), 1, f)?;
-
         f.write_str("@endmindmap\n")
     }
 }
 
+/// Écrit récursivement les enfants d'un nœud dans le formatter, en
+/// utilisant `level` étoiles pour marquer la profondeur courante.
 fn write_node(node: &TrieNode, level: usize, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     for (digit, child) in node.children() {
         write_stars(level, f)?;
@@ -27,6 +50,7 @@ fn write_node(node: &TrieNode, level: usize, f: &mut fmt::Formatter<'_>) -> fmt:
     Ok(())
 }
 
+/// Écrit `count` étoiles dans le formatter.
 fn write_stars(count: usize, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     for _ in 0..count {
         f.write_char('*')?;
@@ -39,6 +63,7 @@ mod tests {
     use super::*;
     use crate::load_contacts;
 
+    /// Construit un trie à partir d'un fichier JSON, helper de tests.
     fn trie_from_file(path: &str) -> Trie {
         let contacts = load_contacts(path).expect("fichier de test manquant");
         let mut trie = Trie::new();
@@ -47,6 +72,8 @@ mod tests {
         }
         trie
     }
+
+    // ===== Tests basiques (étape 6) =====
 
     #[test]
     fn empty_trie_outputs_only_markers() {
@@ -83,8 +110,11 @@ mod tests {
         assert!(output.ends_with("@endmindmap\n"));
     }
 
+    // ===== Tests sur les fichiers de test fournis (étape 7) =====
+
     #[test]
     fn output_for_simple_file() {
+        // 01_simple : un seul contact "Alice" au numéro "0467123456".
         let trie = trie_from_file("data/01_simple.json");
         let output = trie.to_string();
 
@@ -96,9 +126,12 @@ mod tests {
 
     #[test]
     fn output_for_different_roots_has_two_top_branches() {
+        // 02_different_roots : "0123456789" et "1123456789".
+        // → deux branches au niveau 1 ('0' et '1').
         let trie = trie_from_file("data/02_different_roots.json");
         let output = trie.to_string();
 
+        // Compte les lignes qui ont exactement 1 étoile suivie d'un espace.
         let level1_lines = output
             .lines()
             .filter(|line| line.starts_with("* ") && !line.starts_with("**"))
@@ -108,6 +141,8 @@ mod tests {
 
     #[test]
     fn output_for_one_in_another_keeps_both_names() {
+        // 03_one_in_another : "0123" préfixe de "0123456789".
+        // Les deux noms doivent apparaître dans la sortie.
         let trie = trie_from_file("data/03_one_in_another.json");
         let output = trie.to_string();
 
@@ -117,6 +152,7 @@ mod tests {
 
     #[test]
     fn output_for_common_parts_contains_all_five_names() {
+        // 04_common_parts : 5 contacts (Alice, Bob, patate, Urgences, SAMU).
         let trie = trie_from_file("data/04_common_parts.json");
         let output = trie.to_string();
 

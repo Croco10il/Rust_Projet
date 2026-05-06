@@ -10,10 +10,7 @@ fn main() -> Result<()> {
 
     let outputs = runner::run_all("data", "graph")?;
 
-    println!(
-        "Pipeline terminé. {} fichier(s) généré(s) :\n",
-        outputs.len()
-    );
+    println!("Pipeline terminé. {} fichier(s) généré(s) :\n", outputs.len());
     for path in &outputs {
         println!("  ✓ {}", path.display());
     }

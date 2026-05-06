@@ -29,22 +29,18 @@ pub struct TrieNode {
 }
 
 impl TrieNode {
-    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    #[must_use]
     pub fn is_terminal(&self) -> bool {
         self.terminal.is_some()
     }
 
-    #[must_use]
     pub fn children(&self) -> &BTreeMap<char, TrieNode> {
         &self.children
     }
 
-    #[must_use]
     pub fn terminal(&self) -> Option<&str> {
         self.terminal.as_deref()
     }
@@ -57,12 +53,10 @@ pub struct Trie {
 }
 
 impl Trie {
-    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.root.children.is_empty()
     }
@@ -79,7 +73,6 @@ impl Trie {
         current.terminal = Some(name.to_string());
     }
 
-    #[must_use]
     pub fn root(&self) -> &TrieNode {
         &self.root
     }
@@ -88,7 +81,6 @@ impl Trie {
     ///
     /// On compte les nœuds terminaux en parcourant l'arbre récursivement.
     /// Cette méthode est utile pour les statistiques et pour les tests.
-    #[must_use]
     pub fn len(&self) -> usize {
         count_terminals(&self.root)
     }
@@ -98,7 +90,6 @@ impl Trie {
     /// On suit le chemin correspondant aux chiffres du numéro depuis la
     /// racine. Si on tombe sur un chemin inexistant ou qu'on arrive à un
     /// nœud non-terminal, le numéro n'est pas dans le trie.
-    #[must_use]
     pub fn contains(&self, number: &str) -> bool {
         let mut current = &self.root;
         for digit in number.chars() {
@@ -113,7 +104,7 @@ impl Trie {
 
 /// Compte récursivement les nœuds terminaux d'un sous-arbre.
 fn count_terminals(node: &TrieNode) -> usize {
-    let here = usize::from(node.is_terminal());
+    let here = if node.is_terminal() { 1 } else { 0 };
     here + node.children.values().map(count_terminals).sum::<usize>()
 }
 
@@ -224,8 +215,10 @@ mod tests {
         b.insert("124", "Bob");
         b.insert("123", "Alice");
 
-        assert_eq!(format!("{a:?}"), format!("{b:?}"));
+        assert_eq!(format!("{:?}", a), format!("{:?}", b));
     }
+
+    // ===== Étape 13 : len() et contains() =====
 
     #[test]
     fn len_is_zero_for_empty_trie() {
@@ -246,12 +239,13 @@ mod tests {
     fn len_does_not_double_count_overwrites() {
         let mut trie = Trie::new();
         trie.insert("123", "Alice");
-        trie.insert("123", "Bob");
+        trie.insert("123", "Bob"); // écrase Alice
         assert_eq!(trie.len(), 1);
     }
 
     #[test]
     fn len_handles_prefix_collision() {
+        // Deux numéros dont l'un est préfixe de l'autre = 2 numéros distincts.
         let mut trie = Trie::new();
         trie.insert("0123", "Bob");
         trie.insert("0123456789", "Alice");
@@ -274,6 +268,8 @@ mod tests {
 
     #[test]
     fn contains_returns_false_for_prefix_only() {
+        // "061234" est préfixe de "0612345678" mais n'a pas été inséré
+        // comme numéro complet → le contient pas.
         let mut trie = Trie::new();
         trie.insert("0612345678", "Alice");
         assert!(!trie.contains("061234"));
