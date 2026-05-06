@@ -1,9 +1,7 @@
 use serde::Deserialize;
 
-
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub struct Contact {
-    
     pub nb: String,
 
     pub name: String,

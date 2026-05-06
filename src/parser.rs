@@ -6,10 +6,8 @@ use std::path::Path;
 use crate::contact::Contact;
 use crate::error::Result;
 
-
 pub fn load_contacts<P: AsRef<Path>>(path: P) -> Result<Vec<Contact>> {
     let raw = fs::read_to_string(path.as_ref())?;
-
 
     if raw.trim().is_empty() {
         return Ok(Vec::new());

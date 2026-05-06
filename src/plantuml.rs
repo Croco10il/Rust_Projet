@@ -1,14 +1,10 @@
-
-
 use std::fmt::{self, Display, Write};
 
 use crate::trie::{Trie, TrieNode};
 
 impl Display for Trie {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        
         f.write_str("@startmindmap\n")?;
-
 
         write_node(self.root(), 1, f)?;
 
@@ -17,24 +13,19 @@ impl Display for Trie {
 }
 
 fn write_node(node: &TrieNode, level: usize, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-
     for (digit, child) in node.children() {
-
         write_stars(level, f)?;
         writeln!(f, " {digit}")?;
-
 
         if let Some(name) = child.terminal() {
             write_stars(level + 1, f)?;
             writeln!(f, " {name}")?;
         }
 
-
         write_node(child, level + 1, f)?;
     }
     Ok(())
 }
-
 
 fn write_stars(count: usize, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     for _ in 0..count {
@@ -47,7 +38,6 @@ fn write_stars(count: usize, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 mod tests {
     use super::*;
     use crate::load_contacts;
-
 
     fn trie_from_file(path: &str) -> Trie {
         let contacts = load_contacts(path).expect("fichier de test manquant");
