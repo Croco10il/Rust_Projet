@@ -81,7 +81,7 @@ pub fn process_file(json_path: &Path, output_dir: &Path) -> Result<PathBuf> {
 /// écrit le résultat PlantUML dans `output_dir`.
 ///
 /// Si `output_dir` n'existe pas, il est créé.
-pub fn run_all<P: AsRef<Path>>(data_dir: P, output_dir: P) -> Result<Vec<PathBuf>> {
+pub fn run_all<P: AsRef<Path>, Q: AsRef<Path>>(data_dir: P, output_dir: Q) -> Result<Vec<PathBuf>> {
     let data_dir = data_dir.as_ref();
     let output_dir = output_dir.as_ref();
 
